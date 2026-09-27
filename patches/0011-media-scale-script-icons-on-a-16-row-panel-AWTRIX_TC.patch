@@ -12,10 +12,6 @@ double classic icons the same way DevicePageIcon::fitToPanel does (capped to
 the panel width, full-screen assets left alone), and upsample the blit with
 nearest-neighbour indexing. Animated icons render into the source-resolution
 buffer as before; only the final blit is scaled.
----
- src/media/ScriptIcon.cpp | 52 ++++++++++++++++++++++++++++++----------
- src/media/ScriptIcon.h   |  4 +++-
- 2 files changed, 43 insertions(+), 13 deletions(-)
 
 diff --git a/src/media/ScriptIcon.cpp b/src/media/ScriptIcon.cpp
 index 302548a..c54fb8f 100644
@@ -150,6 +146,3 @@ index f796e9a..f12eee3 100644
      GifPlayer* anim = nullptr;
      State state = State::kMissing;
      int64_t nextRetryMs = 0;
--- 
-2.43.0
-

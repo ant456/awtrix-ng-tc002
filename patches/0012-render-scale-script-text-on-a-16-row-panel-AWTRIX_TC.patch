@@ -12,9 +12,6 @@ constructed (so the board's real matrixHeight() is known), and hand those to
 scripts everywhere a raw font pointer was used before: the script service and
 the per-tick RenderCtx passed to g_scripts->tick(). Coordinates a script passes
 to text() are unaffected - only the drawn glyph size changes.
----
- src/main.cpp | 24 +++++++++++++++++++-----
- 1 file changed, 19 insertions(+), 5 deletions(-)
 
 diff --git a/src/main.cpp b/src/main.cpp
 index 0caec91..0238e0e 100644
@@ -79,6 +76,3 @@ index 0caec91..0238e0e 100644
      g_pageClock.fill(sctx, now);
      if (g_scripts) g_scripts->tick(sctx, g_engine->currentAppId(), g_engine->incomingAppId());
    }
--- 
-2.43.0
-

@@ -6,9 +6,6 @@ Subject: [PATCH 06/12] media: script JPG icons up to the panel size
 GIF icons already follow the panel; a JPG was decoded into a fixed 8x8 tile. Decode it
 into a panel-sized buffer, take the size icon::draw reports, and pack the rows to the
 picture's own stride so the entry keeps only what it shows.
----
- src/media/ScriptIcon.cpp | 17 +++++++++++++----
- 1 file changed, 13 insertions(+), 4 deletions(-)
 
 diff --git a/src/media/ScriptIcon.cpp b/src/media/ScriptIcon.cpp
 index 32777ac..302548a 100644
@@ -45,6 +42,3 @@ index 32777ac..302548a 100644
        if (!outOfMemory) {
          e.state = State::kMissing;
          e.retryStep = 0;
--- 
-2.43.0
-

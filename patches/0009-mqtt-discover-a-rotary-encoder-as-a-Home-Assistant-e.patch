@@ -9,14 +9,6 @@ state/buttons/* levels. Boards that report hasEncoder() publish each detent as
 a non-retained "cw" / "ccw" on <P>/state/knob, and discovery adds a "Knob"
 event entity for it. The default is false, so other boards announce the same
 document as before.
----
- docs/reference/mqtt.md                     | 18 +++++++++-
- src/core/mqtt/HaDiscovery.cpp              |  7 ++++
- src/core/mqtt/HaDiscovery.h                |  1 +
- src/hal/IBoard.h                           |  3 ++
- src/transport/mqtt/HaAnnouncer.cpp         |  1 +
- test/test_hadiscovery/test_hadiscovery.cpp | 40 +++++++++++++++++++---
- 6 files changed, 64 insertions(+), 6 deletions(-)
 
 diff --git a/docs/reference/mqtt.md b/docs/reference/mqtt.md
 index 0c04a24..738fa17 100644
@@ -270,6 +262,3 @@ index e4ccc0b..74d5cf2 100644
    RUN_TEST(test_every_component_carries_the_topic_base);
    RUN_TEST(test_unique_ids_are_distinct);
    UNITY_END();
--- 
-2.43.0
-

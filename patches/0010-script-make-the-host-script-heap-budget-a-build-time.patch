@@ -7,9 +7,6 @@ Subject: [PATCH 10/12] script: make the host script heap budget a build-time
 A port whose host has memory to spare (the Ulanzi TC002 runs AWTRIX with 12 to 15 MB
 available) sets AWTRIX_SCRIPT_HEAP_BUDGET_BYTES at build time. The default stays the ESP32
 internal-RAM budget of 96 KB, so the simulator, the tests and ESP32 builds are unchanged.
----
- src/core/script/ScriptHeapNative.cpp | 7 ++++++-
- 1 file changed, 6 insertions(+), 1 deletion(-)
 
 diff --git a/src/core/script/ScriptHeapNative.cpp b/src/core/script/ScriptHeapNative.cpp
 index 4a2552b..34ec808 100644
@@ -29,6 +26,3 @@ index 4a2552b..34ec808 100644
  
  std::size_t g_budget = kInternalBudgetBytes;
  std::size_t g_installReserve = 0;
--- 
-2.43.0
-

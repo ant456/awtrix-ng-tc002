@@ -9,19 +9,6 @@ progress bars, status pixels, indicators and the icon gap scale with them, page
 icons may be any size up to the panel and classic 8-row art is doubled. Bar
 charts keep the upstream layout at scale 1. All of it is inert unless
 AWTRIX_TC002 makes displayTextScale() return 2.
----
- src/core/apps/SpecRenderer.cpp     |  7 ++--
- src/core/apps/SpecRenderer.h       |  1 +
- src/core/render/DisplayScale.h     | 16 +++++++++
- src/core/render/Gfx2d.cpp          | 41 +++++++++++++++------
- src/core/render/RenderPipeline.cpp | 35 ++++++++++++------
- src/core/render/RenderPipeline.h   |  5 +++
- src/core/render/ScaledFont.h       | 52 +++++++++++++++++++++++++++
- src/core/render/StatusPixels.cpp   |  6 ++--
- src/media/DevicePageIcon.h         | 58 +++++++++++++++++++++++-------
- 9 files changed, 183 insertions(+), 38 deletions(-)
- create mode 100644 src/core/render/DisplayScale.h
- create mode 100644 src/core/render/ScaledFont.h
 
 diff --git a/src/core/apps/SpecRenderer.cpp b/src/core/apps/SpecRenderer.cpp
 index 70144df..00f545c 100644
@@ -503,6 +490,3 @@ index d006345..f623605 100644
  };
  
  }
--- 
-2.43.0
-
