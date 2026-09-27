@@ -1,0 +1,138 @@
+From 30f4c44a9050227b74a46db152c61cef3437320c Mon Sep 17 00:00:00 2001
+From: awtrix-ng-tc002 <port@awtrix-ng-tc002.invalid>
+Date: Sun, 27 Sep 2026 18:00:00 +0000
+Subject: [PATCH 11/12] media: scale script icons on a 16-row panel
+ (AWTRIX_TC002)
+
+Script icon() calls went through ScriptIconSet, which never got the doubling
+DevicePageIcon already does for AppSpec/notification icons on a taller panel:
+classic 8-row icons stayed native size while everything else around them was
+scaled up. Track the decoded source size separately from the displayed size,
+double classic icons the same way DevicePageIcon::fitToPanel does (capped to
+the panel width, full-screen assets left alone), and upsample the blit with
+nearest-neighbour indexing. Animated icons render into the source-resolution
+buffer as before; only the final blit is scaled.
+---
+ src/media/ScriptIcon.cpp | 43 ++++++++++++++++++++++++++++++++--------
+ src/media/ScriptIcon.h   |  4 +++-
+ 2 files changed, 38 insertions(+), 9 deletions(-)
+
+diff --git a/src/media/ScriptIcon.cpp b/src/media/ScriptIcon.cpp
+index 32777ac..fa94e36 100644
+--- a/src/media/ScriptIcon.cpp
++++ b/src/media/ScriptIcon.cpp
+@@ -29,6 +29,22 @@ constexpr int64_t kOomLogIntervalMs = 60000;
+ 
+ constexpr int kMaxCoordinate = 65535;
+ 
++// Classic 8-row icons are doubled on a taller panel so a script's icon() reads at the same
++// relative size as the rest of the display; an asset already covering the panel (a full-screen
++// GIF) is left alone. Mirrors DevicePageIcon::fitToPanel, which does the same for AppSpec icons.
++void fitToPanel(int srcW, int srcH, int maxWidth, int& outW, int& outH) {
++  outW = srcW;
++  outH = srcH;
++#ifdef AWTRIX_TC002
++  if (srcH <= 8) {
++    outW = std::min(maxWidth, srcW * 2);
++    outH = srcH * 2;
++  }
++#else
++  (void)maxWidth;
++#endif
++}
++
+ }
+ 
+ std::unique_ptr<script::IScriptIconSet> ScriptIcon::createSet() {
+@@ -61,6 +77,7 @@ void ScriptIconSet::reset(Entry& e) {
+   delete e.anim;
+   e.anim = nullptr;
+   e.width = e.height = 0;
++  e.srcWidth = e.srcHeight = 0;
+   e.pixels.clear();
+   e.state = State::kMissing;
+   e.nextRetryMs = 0;
+@@ -77,6 +94,7 @@ void ScriptIconSet::load(Entry& e, int64_t nowMs) {
+   delete e.anim;
+   e.anim = nullptr;
+   e.width = e.height = 0;
++  e.srcWidth = e.srcHeight = 0;
+   e.pixels.clear();
+ 
+   const std::string name(e.name);
+@@ -92,8 +110,9 @@ void ScriptIconSet::load(Entry& e, int64_t nowMs) {
+     const int width = gif->width();
+     const int height = gif->height();
+     if (gif->takeStaticFrame(e.pixels)) {
+-      e.width = width;
+-      e.height = height;
++      e.srcWidth = width;
++      e.srcHeight = height;
++      fitToPanel(width, height, service_.maxWidth(), e.width, e.height);
+       delete gif;
+       e.state = State::kGood;
+       e.retryStep = 0;
+@@ -102,8 +121,9 @@ void ScriptIconSet::load(Entry& e, int64_t nowMs) {
+     const bool transferred = gif->takeInitialFrame(e.pixels);
+     if (transferred || e.pixels.resize(static_cast<size_t>(gif->width()) * gif->height())) {
+       e.anim = gif;
+-      e.width = width;
+-      e.height = height;
++      e.srcWidth = width;
++      e.srcHeight = height;
++      fitToPanel(width, height, service_.maxWidth(), e.width, e.height);
+       Canvas buf(width, height, e.pixels.data());
+       if (!transferred) buf.clear();
+       gif->render(buf, nowMs);
+@@ -122,7 +142,8 @@ void ScriptIconSet::load(Entry& e, int64_t nowMs) {
+       buf.clear();
+       bool outOfMemory = false;
+       if (icon::draw(buf, name, 0, 0, &outOfMemory)) {
+-        e.width = e.height = 8;
++        e.srcWidth = e.srcHeight = 8;
++        fitToPanel(8, 8, service_.maxWidth(), e.width, e.height);
+         e.state = State::kGood;
+         e.retryStep = 0;
+         return;
+@@ -194,13 +215,19 @@ bool ScriptIconSet::draw(Canvas& canvas, std::string_view name, int x, int y, in
+   y = std::clamp(y, -kMaxCoordinate, kMaxCoordinate);
+ 
+   if (e->anim) {
+-    Canvas buf(e->width, e->height, e->pixels.data());
++    // The animation renders into the source-resolution buffer; the blit below upsamples it to
++    // the (possibly doubled) display size every frame.
++    Canvas buf(e->srcWidth, e->srcHeight, e->pixels.data());
+     e->anim->render(buf, nowMs);
+   }
+ 
+   for (int row = 0; row < e->height; ++row)
+-    for (int col = 0; col < e->width; ++col)
+-      canvas.setPixel(x + col, y + row, e->pixels[static_cast<size_t>(row) * e->width + col]);
++    for (int col = 0; col < e->width; ++col) {
++      const int sr = e->srcHeight > 0 ? row * e->srcHeight / e->height : row;
++      const int sc = e->srcWidth > 0 ? col * e->srcWidth / e->width : col;
++      canvas.setPixel(x + col, y + row,
++                       e->pixels[static_cast<size_t>(sr) * e->srcWidth + sc]);
++    }
+   return true;
+ }
+ 
+diff --git a/src/media/ScriptIcon.h b/src/media/ScriptIcon.h
+index f796e9a..f12eee3 100644
+--- a/src/media/ScriptIcon.h
++++ b/src/media/ScriptIcon.h
+@@ -42,8 +42,10 @@ class ScriptIconSet : public script::IScriptIconSet {
+ 
+     char name[kMaxNameLen + 1] = {};
+     media::PodBuffer<uint32_t> pixels;
+-    int width = 0;
++    int width = 0;       // displayed size (doubled from src* for classic icons on a tall panel)
+     int height = 0;
++    int srcWidth = 0;    // decoded pixel buffer size that pixels actually holds
++    int srcHeight = 0;
+     GifPlayer* anim = nullptr;
+     State state = State::kMissing;
+     int64_t nextRetryMs = 0;
+-- 
+2.43.0
+

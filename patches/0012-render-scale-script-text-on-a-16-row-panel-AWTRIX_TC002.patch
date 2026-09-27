@@ -1,0 +1,84 @@
+From f615cd8e4aa3409ad851ad11078fbe40af3db4b6 Mon Sep 17 00:00:00 2001
+From: awtrix-ng-tc002 <port@awtrix-ng-tc002.invalid>
+Date: Sun, 27 Sep 2026 18:05:00 +0000
+Subject: [PATCH 12/12] render: scale script text on a 16-row panel
+ (AWTRIX_TC002)
+
+text()/icon() in scripts read fonts straight from g_scriptSvc.fonts/RenderCtx.fonts,
+which were always the raw, unscaled awtrixFont() - completely bypassing the
+ScaledFont doubling RenderPipeline already builds for itself for built-in apps
+and notifications. Build the same scaled copies once, right after g_pipeline is
+constructed (so the board's real matrixHeight() is known), and hand those to
+scripts everywhere a raw font pointer was used before: the script service and
+the per-tick RenderCtx passed to g_scripts->tick(). Coordinates a script passes
+to text() are unaffected - only the drawn glyph size changes.
+---
+ src/main.cpp | 24 +++++++++++++++++++-----
+ 1 file changed, 19 insertions(+), 5 deletions(-)
+
+diff --git a/src/main.cpp b/src/main.cpp
+index 0caec91..0238e0e 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -47,6 +47,8 @@
+ #include "hal/IBoard.h"
+ #include "media/AwtrixFontAdapter.h"
+ #include "core/render/RenderPipeline.h"
++#include "core/render/DisplayScale.h"
++#include "core/render/ScaledFont.h"
+ #include "media/DevicePageIcon.h"
+ #include "media/ScriptIcon.h"
+ #include "system/DevicePageServices.h"
+@@ -135,6 +137,9 @@ DevicePageIcon g_pageIcon;
+ DevicePageIcon g_pageIconB;
+ DevicePageClock g_pageClock;
+ RenderPipeline* g_pipeline = nullptr;
++// Scaled copies of the built-in fonts for scripts; see the comment where these are reset() in
++// setup(), just after g_pipeline is created.
++ScaledFont g_scriptFonts[kFontCount];
+ render::PowerAnimator* g_power = nullptr;
+ ScriptHttpWorker g_scriptHttp;
+ ScriptMqttBridge g_scriptMqtt;
+@@ -337,6 +342,15 @@ void setup() {
+   deps.clock = &g_pageClock;
+   g_pipeline = new RenderPipeline(g_board->matrixWidth(), g_board->matrixHeight(), deps);
+ 
++  // Scripts (text()/icon() calls) draw through their own path, not RenderPipeline, so they never
++  // saw the 2x scaling built-in apps and notifications get on a 16-row panel. Build the same
++  // scaled copies here and hand them to scripts below instead of the raw fonts.
++  {
++    const int scale = displayTextScale(g_board->matrixHeight());
++    g_scriptFonts[0].reset(awtrixFont(FontId::Small), scale);
++    g_scriptFonts[1].reset(awtrixFont(FontId::Large), scale);
++  }
++
+   logf("boot: AWTRIX NG %s on %s", AWTRIX_NG_VERSION, g_board->name());
+   logf("heap: %u KB pool, %u KB free before radio",
+        (unsigned)(heap_caps_get_total_size(kGuardHeapCaps) / 1024),
+@@ -434,8 +448,8 @@ void setup() {
+   };
+   g_scriptSvc.settings = [] { return &g_engine->state().settings(); };
+   g_scriptSvc.runtime = [] { return &g_engine->state().runtime(); };
+-  g_scriptSvc.fonts[0] = &awtrixFont(FontId::Small);
+-  g_scriptSvc.fonts[1] = &awtrixFont(FontId::Large);
++  g_scriptSvc.fonts[0] = &g_scriptFonts[0].font();
++  g_scriptSvc.fonts[1] = &g_scriptFonts[1].font();
+   g_scriptSvc.panel = g_canvas;
+   g_scriptSvc.setSettings = [](const std::string& json) {
+     Command c(CommandType::SetSettings);
+@@ -643,9 +657,9 @@ void loop() {
+     RenderCtx sctx;
+     sctx.settings = &g_engine->state().settings();
+     sctx.runtime = &g_engine->state().runtime();
+-    sctx.font = &awtrixFont(FontId::Small);
+-    sctx.fonts[0] = &awtrixFont(FontId::Small);
+-    sctx.fonts[1] = &awtrixFont(FontId::Large);
++    sctx.font = &g_scriptFonts[0].font();
++    sctx.fonts[0] = &g_scriptFonts[0].font();
++    sctx.fonts[1] = &g_scriptFonts[1].font();
+     g_pageClock.fill(sctx, now);
+     if (g_scripts) g_scripts->tick(sctx, g_engine->currentAppId(), g_engine->incomingAppId());
+   }
+-- 
+2.43.0
+
