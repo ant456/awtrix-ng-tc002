@@ -1,6 +1,6 @@
-From 30f4c44a9050227b74a46db152c61cef3437320c Mon Sep 17 00:00:00 2001
+From f3f543d4f0c9f75b96b3611500564672d518ea53 Mon Sep 17 00:00:00 2001
 From: awtrix-ng-tc002 <port@awtrix-ng-tc002.invalid>
-Date: Sun, 27 Sep 2026 18:00:00 +0000
+Date: Sun, 27 Sep 2026 20:00:00 +0000
 Subject: [PATCH 11/12] media: scale script icons on a 16-row panel
  (AWTRIX_TC002)
 
@@ -13,12 +13,12 @@ the panel width, full-screen assets left alone), and upsample the blit with
 nearest-neighbour indexing. Animated icons render into the source-resolution
 buffer as before; only the final blit is scaled.
 ---
- src/media/ScriptIcon.cpp | 43 ++++++++++++++++++++++++++++++++--------
+ src/media/ScriptIcon.cpp | 52 ++++++++++++++++++++++++++++++----------
  src/media/ScriptIcon.h   |  4 +++-
- 2 files changed, 38 insertions(+), 9 deletions(-)
+ 2 files changed, 43 insertions(+), 13 deletions(-)
 
 diff --git a/src/media/ScriptIcon.cpp b/src/media/ScriptIcon.cpp
-index 32777ac..fa94e36 100644
+index 302548a..c54fb8f 100644
 --- a/src/media/ScriptIcon.cpp
 +++ b/src/media/ScriptIcon.cpp
 @@ -29,6 +29,22 @@ constexpr int64_t kOomLogIntervalMs = 60000;
@@ -84,17 +84,34 @@ index 32777ac..fa94e36 100644
        Canvas buf(width, height, e.pixels.data());
        if (!transferred) buf.clear();
        gif->render(buf, nowMs);
-@@ -122,7 +142,8 @@ void ScriptIconSet::load(Entry& e, int64_t nowMs) {
+@@ -124,19 +144,21 @@ void ScriptIconSet::load(Entry& e, int64_t nowMs) {
+       Canvas buf(maxWidth, service_.maxHeight(), e.pixels.data());
        buf.clear();
        bool outOfMemory = false;
-       if (icon::draw(buf, name, 0, 0, &outOfMemory)) {
--        e.width = e.height = 8;
-+        e.srcWidth = e.srcHeight = 8;
-+        fitToPanel(8, 8, service_.maxWidth(), e.width, e.height);
+-      if (icon::draw(buf, name, 0, 0, &outOfMemory, &e.width, &e.height)) {
+-        for (int y = 1; y < e.height; ++y)
+-          std::memmove(e.pixels.data() + static_cast<size_t>(y) * e.width,
++      if (icon::draw(buf, name, 0, 0, &outOfMemory, &e.srcWidth, &e.srcHeight)) {
++        for (int y = 1; y < e.srcHeight; ++y)
++          std::memmove(e.pixels.data() + static_cast<size_t>(y) * e.srcWidth,
+                        e.pixels.data() + static_cast<size_t>(y) * maxWidth,
+-                       static_cast<size_t>(e.width) * sizeof(uint32_t));
+-        e.pixels.resize(static_cast<size_t>(e.width) * e.height);
++                       static_cast<size_t>(e.srcWidth) * sizeof(uint32_t));
++        e.pixels.resize(static_cast<size_t>(e.srcWidth) * e.srcHeight);
+         e.pixels.shrinkToFit();
++        fitToPanel(e.srcWidth, e.srcHeight, maxWidth, e.width, e.height);
          e.state = State::kGood;
          e.retryStep = 0;
          return;
-@@ -194,13 +215,19 @@ bool ScriptIconSet::draw(Canvas& canvas, std::string_view name, int x, int y, in
+       }
+       e.pixels.clear();
+       e.width = e.height = 0;
++      e.srcWidth = e.srcHeight = 0;
+       if (!outOfMemory) {
+         e.state = State::kMissing;
+         e.retryStep = 0;
+@@ -203,13 +225,19 @@ bool ScriptIconSet::draw(Canvas& canvas, std::string_view name, int x, int y, in
    y = std::clamp(y, -kMaxCoordinate, kMaxCoordinate);
  
    if (e->anim) {

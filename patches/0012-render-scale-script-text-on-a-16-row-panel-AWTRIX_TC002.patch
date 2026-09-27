@@ -1,6 +1,6 @@
-From f615cd8e4aa3409ad851ad11078fbe40af3db4b6 Mon Sep 17 00:00:00 2001
+From e8c55ce27457e8543f8968cbe3584e517041e3bd Mon Sep 17 00:00:00 2001
 From: awtrix-ng-tc002 <port@awtrix-ng-tc002.invalid>
-Date: Sun, 27 Sep 2026 18:05:00 +0000
+Date: Sun, 27 Sep 2026 20:05:00 +0000
 Subject: [PATCH 12/12] render: scale script text on a 16-row panel
  (AWTRIX_TC002)
 
