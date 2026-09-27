@@ -1,12 +1,16 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: awtrix-ng-tc002 <port@awtrix-ng-tc002.invalid>
 Date: Wed, 16 Sep 2026 16:19:35 +0200
-Subject: [PATCH 03/10] sim: extension points for host ports on the HTTP server
+Subject: [PATCH 03/12] sim: extension points for host ports on the HTTP server
 
 SimHttpExtension lets a host port answer or gate requests ahead of routing,
 register its own routes before the catch-alls and adjust the invented device
 facts, without patching the server. runOnLoop is exposed for handlers that run
 on the listener thread. A failed asset write now answers 507 instead of 200.
+---
+ src/sim/SimHttpServer.cpp | 18 +++++++++++++++---
+ src/sim/SimHttpServer.h   | 20 ++++++++++++++++++++
+ 2 files changed, 35 insertions(+), 3 deletions(-)
 
 diff --git a/src/sim/SimHttpServer.cpp b/src/sim/SimHttpServer.cpp
 index bd45756..cde6055 100644
@@ -130,3 +134,6 @@ index 8473ac0..f86977b 100644
    void setOnConfigChanged(std::function<void()> cb);
    void setOnAssetsChanged(std::function<void()> cb);
    using ScriptSourceFn = std::function<bool(const std::string& name, std::string& out)>;
+-- 
+2.43.0
+

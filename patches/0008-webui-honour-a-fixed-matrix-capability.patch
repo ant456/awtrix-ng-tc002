@@ -1,11 +1,14 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: awtrix-ng-tc002 <port@awtrix-ng-tc002.invalid>
 Date: Wed, 16 Sep 2026 16:19:35 +0200
-Subject: [PATCH 08/10] webui: honour a fixed-matrix capability
+Subject: [PATCH 08/12] webui: honour a fixed-matrix capability
 
 When capabilities report a fixed matrix, the GPIO, panel and sensor fields are
 hidden, the live preview and icon limits follow the reported size, the icon
 editor offers matching presets and firmware uploads accept .img files.
+---
+ webui/index.html | 74 +++++++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 61 insertions(+), 13 deletions(-)
 
 diff --git a/webui/index.html b/webui/index.html
 index a9cf165..c2fd9f8 100644
@@ -175,3 +178,6 @@ index a9cf165..c2fd9f8 100644
    const loading=el('div',{class:'piskelload'},el('span',{class:'spin'}),el('span',null,t('edLoading')));
    const frame=el('iframe',{id:'piskelFrame',src,title:t('editorTab'),allow:'clipboard-read; clipboard-write'});
    view.append(el('div',{class:'piskelwrap wide'},loading,frame));
+-- 
+2.43.0
+

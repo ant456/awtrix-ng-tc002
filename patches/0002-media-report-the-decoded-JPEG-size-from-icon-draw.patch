@@ -1,10 +1,15 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: awtrix-ng-tc002 <port@awtrix-ng-tc002.invalid>
 Date: Wed, 16 Sep 2026 16:19:35 +0200
-Subject: [PATCH 02/10] media: report the decoded JPEG size from icon::draw
+Subject: [PATCH 02/12] media: report the decoded JPEG size from icon::draw
 
 Callers that place text next to an icon or blit it into a larger tile need the
 real dimensions; both renderers also refuse a JPEG larger than the canvas.
+---
+ src/media/IconRenderer.cpp  | 14 +++++++++++++-
+ src/media/IconRenderer.h    |  2 +-
+ src/sim/SimIconRenderer.cpp |  9 ++++++++-
+ 3 files changed, 22 insertions(+), 3 deletions(-)
 
 diff --git a/src/media/IconRenderer.cpp b/src/media/IconRenderer.cpp
 index 85a9fe0..fd0ef12 100644
@@ -78,3 +83,6 @@ index d2496c1..41ef871 100644
    jd.swap = 0;
    if (jd_decomp(&jd, jpgOut, 0) != JDR_OK) {
      logf("icon: %s is not a JPEG the decoder can read", label);
+-- 
+2.43.0
+

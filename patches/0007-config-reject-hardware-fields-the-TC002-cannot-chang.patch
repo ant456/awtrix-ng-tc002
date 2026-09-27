@@ -1,11 +1,14 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: awtrix-ng-tc002 <port@awtrix-ng-tc002.invalid>
 Date: Wed, 16 Sep 2026 16:19:35 +0200
-Subject: [PATCH 07/10] config: reject hardware fields the TC002 cannot change
+Subject: [PATCH 07/12] config: reject hardware fields the TC002 cannot change
  (AWTRIX_TC002)
 
 The clock has fixed wiring and a fixed 52 by 16 matrix; a restored backup or a
 PUT that changes them is refused with 422 instead of being applied silently.
+---
+ src/persistence/SystemConfigApply.cpp | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
 
 diff --git a/src/persistence/SystemConfigApply.cpp b/src/persistence/SystemConfigApply.cpp
 index 23722a0..a45c682 100644
@@ -33,3 +36,6 @@ index 23722a0..a45c682 100644
    // A restored backup keeps the credentials this device is connected with — the backup may come
    // from another network, and taking its Wi-Fi settings would strand the device.
    if (origin == Origin::Restore) {
+-- 
+2.43.0
+

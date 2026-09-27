@@ -1,4 +1,4 @@
-From f3f543d4f0c9f75b96b3611500564672d518ea53 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: awtrix-ng-tc002 <port@awtrix-ng-tc002.invalid>
 Date: Sun, 27 Sep 2026 20:00:00 +0000
 Subject: [PATCH 11/12] media: scale script icons on a 16-row panel
