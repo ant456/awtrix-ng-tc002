@@ -53,6 +53,8 @@
 #include "core/render/PaletteStore.h"
 #include "core/render/PowerAnimator.h"
 #include "core/render/RenderPipeline.h"
+#include "core/render/DisplayScale.h"
+#include "core/render/ScaledFont.h"
 #include "core/script/ScriptHost.h"
 #include "core/script/ScriptService.h"
 #include "core/script/ScriptSourceService.h"
@@ -169,6 +171,9 @@ DevicePageIcon g_pageIcon;
 DevicePageIcon g_pageIconB;
 SimPageClock g_pageClock;
 RenderPipeline* g_pipeline = nullptr;
+// Scaled copies of the built-in fonts for scripts. Scripts draw through their own path, not
+// RenderPipeline, so without these text() stays at native size on the 16-row panel.
+ScaledFont g_scriptFonts[kFontCount];
 render::PowerAnimator* g_power = nullptr;
 Tc002ScriptHttp g_scriptHttp;
 ScriptIcon g_scriptIcon;
@@ -364,6 +369,12 @@ int main(int argc, char** argv) {
   deps.clock = &g_pageClock;
   g_pipeline = new RenderPipeline(g_board.matrixWidth(), g_board.matrixHeight(), deps);
 
+  {
+    const int scale = displayTextScale(g_board.matrixHeight());
+    g_scriptFonts[0].reset(awtrixFont(FontId::Small), scale);
+    g_scriptFonts[1].reset(awtrixFont(FontId::Large), scale);
+  }
+
   if (g_term.begin(termMode, port, g_engine))
     g_board.onShow = [](const Canvas& c, uint8_t bri) { g_term.render(c, bri); };
   g_board.onShow = [](const Canvas& c, uint8_t bri) {
@@ -428,8 +439,8 @@ int main(int argc, char** argv) {
   };
   g_scriptSvc.settings = [] { return &g_engine->state().settings(); };
   g_scriptSvc.runtime = [] { return &g_engine->state().runtime(); };
-  g_scriptSvc.fonts[0] = &awtrixFont(FontId::Small);
-  g_scriptSvc.fonts[1] = &awtrixFont(FontId::Large);
+  g_scriptSvc.fonts[0] = &g_scriptFonts[0].font();
+  g_scriptSvc.fonts[1] = &g_scriptFonts[1].font();
   g_scriptSvc.panel = g_canvas;
   g_scriptSvc.setSettings = [](const std::string& json) {
     Command c(CommandType::SetSettings);
@@ -609,9 +620,9 @@ int main(int argc, char** argv) {
       RenderCtx sctx;
       sctx.settings = &g_engine->state().settings();
       sctx.runtime = &g_engine->state().runtime();
-      sctx.font = &awtrixFont(FontId::Small);
-      sctx.fonts[0] = &awtrixFont(FontId::Small);
-      sctx.fonts[1] = &awtrixFont(FontId::Large);
+      sctx.font = &g_scriptFonts[0].font();
+      sctx.fonts[0] = &g_scriptFonts[0].font();
+      sctx.fonts[1] = &g_scriptFonts[1].font();
       g_pageClock.fill(sctx, now);
       if (g_scripts) g_scripts->tick(sctx, g_engine->currentAppId(), g_engine->incomingAppId());
     }
